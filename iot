@@ -1,0 +1,55 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid = "SSID";     
+const char* password = "SENHA";
+
+const int soilMoisturePin = 34;
+int soilMoistureValue = 0;
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+
+  WiFi.begin(ssid, password);
+  Serial.print("Conectando ao Wi-Fi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nConectado ao Wi-Fi");
+}
+
+void loop() {
+  soilMoistureValue = analogRead(soilMoisturePin);
+  int moisturePercent = map(soilMoistureValue, 4095, 0, 0, 100);
+
+  Serial.print("Umidade do Solo: ");
+  Serial.print(moisturePercent);
+  Serial.println("%");
+
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin("https://upbeat-vast-litter.glitch.me/sensor_api");
+    http.addHeader("Content-Type", "application/json");
+
+
+    String jsonData = "{\"umidade\": " + String(moisturePercent) + ", \"temperatura\": " + String(0) + "}";
+    int httpResponseCode = http.POST(jsonData);
+
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.print("Resposta da API: ");
+      Serial.println(response);
+    } else {
+      Serial.print("Erro na requisição: ");
+      Serial.println(httpResponseCode);
+    }
+
+    http.end();
+  } else {
+    Serial.println("Não conectado ao Wi-Fi");
+  }
+
+  delay(1000);
+}
